@@ -15,9 +15,14 @@ app.use(cors());
 
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.send('Hello GameShop');
+});
+
 app.use('/users', userRoutes);
 app.use('/categories', categoryRoutes);
 app.use('/games', gameRoutes);
 app.use('/purchases', purchaseRoutes);
 
 app.listen(3000, () => console.log('Server running on port 3000'));
+
