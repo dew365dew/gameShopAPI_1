@@ -64,6 +64,58 @@ router.post('/login', async (req, res) => {
   }
 });
 
+
+
+// ✅ UPDATE USER
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, email, password, profile_image_path } = req.body;
+
+    // ตรวจสอบว่าผู้ใช้นี้มีอยู่จริง
+    const [user] = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
+    if (user.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // ตรวจสอบว่าชื่อหรืออีเมลซ้ำกับคนอื่นไหม
+    const [exists] = await db.execute(
+      'SELECT * FROM users WHERE (username = ? OR email = ?) AND id != ?',
+      [username, email, id]
+    );
+    if (exists.length > 0) {
+      return res.status(400).json({ error: 'Username or email already exists' });
+    }
+
+    // ถ้ามี password ใหม่ → hash ก่อน
+    let passwordHash = user[0].password_hash;
+    if (password && password.trim() !== '') {
+      passwordHash = await bcrypt.hash(password, 10);
+    }
+
+    // อัปเดตข้อมูล
+    await db.execute(
+      `UPDATE users 
+       SET username = ?, email = ?, password_hash = ?, profile_image_path = ?
+       WHERE id = ?`,
+      [username, email, passwordHash, profile_image_path || null, id]
+    );
+
+    res.json({ message: 'User updated successfully' });
+  } catch (err) {
+    console.error('❌ Update user error:', err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+});
+
+
+
+
+
+
+
+
+
 // Get all users with profile image
 router.get('/', async (req, res) => {
   try {
@@ -78,3 +130,4 @@ router.get('/', async (req, res) => {
 });
 
 export default router;
+
