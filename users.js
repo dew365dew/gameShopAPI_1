@@ -142,21 +142,17 @@ router.post('/:id/topup', async (req, res) => {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
-    // ตรวจสอบว่ามี user ไหม
     const [user] = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
     if (!user.length) return res.status(404).json({ error: 'User not found' });
 
-    // เริ่ม transaction
     await db.beginTransaction();
 
-    // เพิ่มรายการ top-up
     await db.execute(
       `INSERT INTO wallet_transactions (user_id, amount, txn_type, detail)
        VALUES (?, ?, 'topup', 'Top-up wallet')`,
       [id, amount]
     );
 
-    // อัปเดตยอดเงิน
     await db.execute(
       `UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?`,
       [amount, id]
@@ -166,11 +162,12 @@ router.post('/:id/topup', async (req, res) => {
 
     res.json({ message: 'Top-up successful', amount_added: amount });
   } catch (err) {
+    console.error('❌ Top-up error:', err.message);
     await db.rollback();
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error', details: err.message });
   }
 });
+
 
 
 
@@ -255,5 +252,6 @@ router.get('/:id/history', async (req, res) => {
 
 
 export default router;
+
 
 
