@@ -132,42 +132,60 @@ router.get('/', async (req, res) => {
 
 
 
-// ✅ เติมเงินเข้ากระเป๋า
+
+// ✅ เติมเงินเข้ากระเป๋า (เวอร์ชันแก้ถูกต้อง)
 router.post('/:id/topup', async (req, res) => {
+  const connection = await db.getConnection(); // ดึง connection จาก pool
   try {
     const { id } = req.params;
     const { amount } = req.body;
 
     if (!amount || amount <= 0) {
+      connection.release();
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
-    const [user] = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
-    if (!user.length) return res.status(404).json({ error: 'User not found' });
+    // ตรวจสอบ user
+    const [user] = await connection.execute('SELECT * FROM users WHERE id = ?', [id]);
+    if (!user.length) {
+      connection.release();
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-    await db.beginTransaction();
+    // ✅ เริ่ม transaction
+    await connection.beginTransaction();
 
-    await db.execute(
+    // เพิ่มรายการ top-up
+    await connection.execute(
       `INSERT INTO wallet_transactions (user_id, amount, txn_type, detail)
        VALUES (?, ?, 'topup', 'Top-up wallet')`,
       [id, amount]
     );
 
-    await db.execute(
+    // อัปเดตยอดเงิน
+    await connection.execute(
       `UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?`,
       [amount, id]
     );
 
-    await db.commit();
+    // ✅ commit
+    await connection.commit();
 
     res.json({ message: 'Top-up successful', amount_added: amount });
   } catch (err) {
     console.error('❌ Top-up error:', err.message);
-    await db.rollback();
+
+    try {
+      await connection.rollback(); // rollback ถ้ามี error
+    } catch (rollbackErr) {
+      console.error('Rollback failed:', rollbackErr.message);
+    }
+
     res.status(500).json({ error: 'Server error', details: err.message });
+  } finally {
+    connection.release(); // ✅ ปล่อย connection คืน pool ทุกครั้ง
   }
 });
-
 
 
 
@@ -252,6 +270,7 @@ router.get('/:id/history', async (req, res) => {
 
 
 export default router;
+
 
 
 
