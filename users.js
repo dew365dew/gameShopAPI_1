@@ -129,5 +129,131 @@ router.get('/', async (req, res) => {
   }
 });
 
+
+
+
+// ✅ เติมเงินเข้ากระเป๋า
+router.post('/:id/topup', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    // ตรวจสอบว่ามี user ไหม
+    const [user] = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
+    if (!user.length) return res.status(404).json({ error: 'User not found' });
+
+    // เริ่ม transaction
+    await db.beginTransaction();
+
+    // เพิ่มรายการ top-up
+    await db.execute(
+      `INSERT INTO wallet_transactions (user_id, amount, txn_type, detail)
+       VALUES (?, ?, 'topup', 'Top-up wallet')`,
+      [id, amount]
+    );
+
+    // อัปเดตยอดเงิน
+    await db.execute(
+      `UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?`,
+      [amount, id]
+    );
+
+    await db.commit();
+
+    res.json({ message: 'Top-up successful', amount_added: amount });
+  } catch (err) {
+    await db.rollback();
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+
+// ✅ ประวัติการซื้อเกม + เติมเงิน
+router.get('/:id/history', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // ตรวจสอบ user
+    const [user] = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
+    if (!user.length) return res.status(404).json({ error: 'User not found' });
+
+    // ดึงข้อมูลเกมที่ซื้อ
+    const [purchases] = await db.execute(
+      `SELECT g.title, pi.price_at_purchase AS price, p.created_at AS purchased_at
+       FROM purchases p
+       JOIN purchase_items pi ON p.id = pi.purchase_id
+       JOIN games g ON pi.game_id = g.id
+       WHERE p.user_id = ?
+       ORDER BY p.created_at DESC`,
+      [id]
+    );
+
+    // ดึงข้อมูลการเติมเงิน
+    const [topups] = await db.execute(
+      `SELECT amount, created_at FROM wallet_transactions
+       WHERE user_id = ? AND txn_type = 'topup'
+       ORDER BY created_at DESC`,
+      [id]
+    );
+
+    res.json({
+      user: user[0].username,
+      purchases,
+      topups
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+// ✅ ประวัติการซื้อเกม + เติมเงิน
+router.get('/:id/history', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // ตรวจสอบ user
+    const [user] = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
+    if (!user.length) return res.status(404).json({ error: 'User not found' });
+
+    // ดึงข้อมูลเกมที่ซื้อ
+    const [purchases] = await db.execute(
+      `SELECT g.title, pi.price_at_purchase AS price, p.created_at AS purchased_at
+       FROM purchases p
+       JOIN purchase_items pi ON p.id = pi.purchase_id
+       JOIN games g ON pi.game_id = g.id
+       WHERE p.user_id = ?
+       ORDER BY p.created_at DESC`,
+      [id]
+    );
+
+    // ดึงข้อมูลการเติมเงิน
+    const [topups] = await db.execute(
+      `SELECT amount, created_at FROM wallet_transactions
+       WHERE user_id = ? AND txn_type = 'topup'
+       ORDER BY created_at DESC`,
+      [id]
+    );
+
+    res.json({
+      user: user[0].username,
+      purchases,
+      topups
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
 export default router;
+
 
