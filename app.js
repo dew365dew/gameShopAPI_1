@@ -4,6 +4,7 @@ import userRoutes from './users.js';
 import categoryRoutes from './categories.js';
 import gameRoutes from './games.js';
 import purchaseRoutes from './purchases.js';
+import cartRoutes from "./cart.js";
 
 const app = express();
 
@@ -23,6 +24,8 @@ app.use('/users', userRoutes);
 app.use('/categories', categoryRoutes);
 app.use('/games', gameRoutes);
 app.use('/purchases', purchaseRoutes);
+app.use("/cart", cartRoutes);
 
 app.listen(3000, () => console.log('Server running on port 3000'));
+
 
