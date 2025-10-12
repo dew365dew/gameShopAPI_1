@@ -252,8 +252,55 @@ router.get('/transactions/all', async (req, res) => {
 });
 
 
+// ✅ แสดงเกมที่ผู้ใช้เป็นเจ้าของ (My Library)
+router.get('/:id/library', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // ตรวจสอบว่ามี user จริงไหม
+    const [user] = await db.execute('SELECT id FROM users WHERE id = ?', [id]);
+    if (!user.length) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // ดึงเกมทั้งหมดที่ user คนนี้เป็นเจ้าของ พร้อมรายละเอียดจากตาราง games + categories
+    const [ownedGames] = await db.execute(
+      `
+      SELECT 
+        g.id AS game_id,
+        g.title,
+        g.price,
+        g.image_path,
+        g.description,
+        g.release_date,
+        g.created_at AS game_created_at,
+        c.name AS category_name,
+        ul.purchased_at
+      FROM user_library ul
+      INNER JOIN games g ON ul.game_id = g.id
+      INNER JOIN categories c ON g.category_id = c.id
+      WHERE ul.user_id = ?
+      ORDER BY ul.purchased_at DESC
+      `,
+      [id]
+    );
+
+    res.json({
+      user_id: id,
+      owned_count: ownedGames.length,
+      owned_games: ownedGames
+    });
+  } catch (err) {
+    console.error('❌ Get owned games error:', err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+});
+
+
+
 
 export default router;
+
 
 
 
