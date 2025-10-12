@@ -38,6 +38,18 @@ router.post("/", async (req, res) => {
   }
 });
 
+
+// 🗑️ ล้างตะกร้าหลังสั่งซื้อสำเร็จ
+router.delete("/clear/:user_id", async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    await db.execute("DELETE FROM cart_items WHERE user_id = ?", [user_id]);
+    res.json({ message: "Cart cleared" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ❌ ลบเกมออกจากตะกร้า
 router.delete("/:user_id/:game_id", async (req, res) => {
   try {
@@ -52,15 +64,6 @@ router.delete("/:user_id/:game_id", async (req, res) => {
   }
 });
 
-// 🗑️ ล้างตะกร้าหลังสั่งซื้อสำเร็จ
-router.delete("/clear/:user_id", async (req, res) => {
-  try {
-    const { user_id } = req.params;
-    await db.execute("DELETE FROM cart_items WHERE user_id = ?", [user_id]);
-    res.json({ message: "Cart cleared" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+
 
 export default router;
