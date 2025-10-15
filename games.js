@@ -141,4 +141,56 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+
+/**
+ * ✅ การจัดอันดับเกมขายดี (Top 5 จากยอดขายจริง)
+ * ตัวอย่าง: GET /games/top-sellers
+ */
+router.get('/top-sellers', async (req, res) => {
+  try {
+    // ดึงยอดขายรวมของแต่ละเกม จาก purchase_items
+    const [topGames] = await db.execute(`
+      SELECT 
+        g.id AS game_id,
+        g.title,
+        g.image_path,
+        g.price,
+        c.name AS category_name,
+        COUNT(pi.id) AS total_sales,
+        SUM(pi.price_at_purchase) AS total_revenue
+      FROM purchase_items pi
+      INNER JOIN games g ON pi.game_id = g.id
+      INNER JOIN categories c ON g.category_id = c.id
+      GROUP BY g.id, g.title, g.image_path, g.price, c.name
+      ORDER BY total_sales DESC, total_revenue DESC
+      LIMIT 5
+    `);
+
+    // ถ้าไม่มีข้อมูลยอดขายเลย
+    if (topGames.length === 0) {
+      return res.status(200).json({ message: 'ยังไม่มีข้อมูลยอดขายเกม' });
+    }
+
+    res.json({
+      ranking_date: new Date().toISOString().split('T')[0],
+      top_count: topGames.length,
+      top_games: topGames.map((g, i) => ({
+        rank: i + 1,
+        game_id: g.game_id,
+        title: g.title,
+        category: g.category_name,
+        price: g.price,
+        total_sales: g.total_sales,
+        total_revenue: g.total_revenue,
+        image_path: g.image_path
+      }))
+    });
+  } catch (err) {
+    console.error('❌ Get top-sellers error:', err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+});
+
+
 export default router;
+
