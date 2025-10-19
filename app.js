@@ -27,9 +27,10 @@ app.use('/games', gameRoutes);
 app.use('/purchases', purchaseRoutes);
 app.use("/cart", cartRoutes);
 // ✅ ใช้งาน route
-app.use('/api/discounts', discounts);
+app.use('/discounts', discounts);
 
 app.listen(3000, () => console.log('Server running on port 3000'));
+
 
 
 
