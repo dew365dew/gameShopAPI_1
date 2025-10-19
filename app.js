@@ -5,6 +5,7 @@ import categoryRoutes from './categories.js';
 import gameRoutes from './games.js';
 import purchaseRoutes from './purchases.js';
 import cartRoutes from "./cart.js";
+import discounts from './discounts.js'; // ✅ import route ใหม่
 
 const app = express();
 
@@ -25,7 +26,10 @@ app.use('/categories', categoryRoutes);
 app.use('/games', gameRoutes);
 app.use('/purchases', purchaseRoutes);
 app.use("/cart", cartRoutes);
+// ✅ ใช้งาน route
+app.use('/api/discounts', discounts);
 
 app.listen(3000, () => console.log('Server running on port 3000'));
+
 
 
